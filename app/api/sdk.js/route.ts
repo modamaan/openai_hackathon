@@ -63,6 +63,11 @@ export async function GET(request: NextRequest) {
     .ro-bot pre { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
     .ro-bot pre code { background: none; padding: 0; }
     .ro-bot ul, .ro-bot ol { margin: 10px 0; padding-left: 20px; }
+
+    /* Suggested Questions (Pills) */
+    .ro-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; transition: opacity 0.3s; }
+    .ro-pill { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; font-family: inherit; }
+    .ro-pill:hover { background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); transform: translateY(-1px); color: white; }
     
     .ro-typing { display: flex; gap: 4px; align-items: center; height: 20px; }
     .ro-dot { width: 6px; height: 6px; background: rgba(255,255,255,0.4); border-radius: 50%; animation: jump 1.4s infinite ease-in-out both; }
@@ -191,13 +196,42 @@ export async function GET(request: NextRequest) {
       if (!res.ok) throw new Error();
       var data = await res.json();
       
+      if (data.botName) {
+        var titleEl = document.getElementById('replyo-header-title');
+        if (titleEl) {
+          titleEl.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="#10b981"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.56 1.16 4.88 3.03 6.55.15.13.25.32.22.52-.16 1.13-.53 2.15-1.02 3.02-.13.23.08.49.33.43 2.1-.5 4.05-1.4 5.56-2.61.16-.13.36-.18.56-.15 1.05.15 2.15.24 3.32.24 5.52 0 10-4.03 10-9s-4.48-9-10-9zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>' + " " + data.botName;
+        }
+      }
+
       if (data.messages && data.messages.length > 0) {
         data.messages.forEach(msg => {
           appendMsg(msg.content, msg.role, msg.role === 'assistant');
         });
       } else {
-        // Default welcome message
-        appendMsg('Hi there! 👋 How can I help you today?', 'bot', false);
+        // Default welcome message dynamically using the bot name
+        var greeting = 'Hi there! 👋 Welcome to ' + (data.botName || 'Support') + '. How can I help you today?';
+        var botDiv = appendMsg(greeting, 'bot', false);
+        
+        // Render Frequent Questions if any
+        if (data.suggestedQuestions && data.suggestedQuestions.length > 0) {
+          var pills = document.createElement('div');
+          pills.className = 'ro-pills';
+          data.suggestedQuestions.forEach(function(q) {
+            var pill = document.createElement('button');
+            pill.className = 'ro-pill';
+            pill.textContent = q;
+            pill.type = 'button'; // prevent form submission side effects
+            pill.onclick = function() {
+              input.value = q;
+              sendBtn.disabled = false;
+              form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+              pills.style.opacity = '0';
+              setTimeout(function() { pills.style.display = 'none'; }, 300);
+            };
+            pills.appendChild(pill);
+          });
+          botDiv.parentNode.appendChild(pills);
+        }
       }
     } catch(e) {
       appendMsg('Hi there! 👋 How can I help you today?', 'bot', false);
@@ -259,7 +293,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(script, {
     headers: {
       "Content-Type": "application/javascript",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "no-store, max-age=0",
       "Access-Control-Allow-Origin": "*",
     },
   });

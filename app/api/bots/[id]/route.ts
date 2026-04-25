@@ -41,6 +41,7 @@ export async function PATCH(
         name: data.name ?? undefined,
         description: data.description ?? undefined,
         systemPrompt: data.systemPrompt ?? undefined,
+        suggestedQuestions: data.suggestedQuestions ?? undefined,
       })
       .where(and(eq(bots.id, id), eq(bots.userId, user.id)))
       .returning();

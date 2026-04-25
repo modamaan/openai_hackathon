@@ -21,6 +21,7 @@ export const bots = pgTable("bots", {
   systemPrompt: text("system_prompt").default(
     "You are a helpful customer support assistant. Answer questions based only on the provided knowledge base. If you don't know the answer, say so politely."
   ),
+  suggestedQuestions: text("suggested_questions").default('["What are your services?", "How can I contact support?"]'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
