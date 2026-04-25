@@ -20,6 +20,9 @@ export default async function ConversationsPage() {
             id: conversations.id,
             sessionId: conversations.sessionId,
             createdAt: conversations.createdAt,
+            visitorEmail: conversations.visitorEmail,
+            visitorPhone: conversations.visitorPhone,
+            isLead: conversations.isLead,
             botId: conversations.botId,
             botName: bots.name,
             messageCount: count(messages.id),
@@ -65,8 +68,9 @@ export default async function ConversationsPage() {
         ) : (
           <>
             {/* Table header */}
-            <div className="grid grid-cols-4 gap-4 px-5 py-2.5 border-b border-white/[0.04] text-white/25 text-xs uppercase tracking-widest font-medium">
+            <div className="grid grid-cols-5 gap-4 px-5 py-2.5 border-b border-white/[0.04] text-white/25 text-xs uppercase tracking-widest font-medium">
               <span>Session</span>
+              <span>Lead Info</span>
               <span>Bot</span>
               <span>Messages</span>
               <span>Date</span>
@@ -76,7 +80,7 @@ export default async function ConversationsPage() {
                 <Link
                   key={conv.id}
                   href={`/dashboard/conversations/${conv.id}`}
-                  className="grid grid-cols-4 gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors group items-center"
+                  className="grid grid-cols-5 gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors group items-center"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-6 h-6 rounded-md bg-white/[0.04] border border-white/[0.07] flex items-center justify-center shrink-0">
@@ -85,6 +89,16 @@ export default async function ConversationsPage() {
                     <span className="text-white/50 text-xs font-mono truncate">
                       {conv.sessionId.slice(0, 8)}…
                     </span>
+                  </div>
+                  <div className="flex items-center min-w-0 pr-4">
+                    {conv.isLead ? (
+                      <span className="text-emerald-400 text-xs font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                        {conv.visitorPhone || conv.visitorEmail}
+                      </span>
+                    ) : (
+                      <span className="text-white/20 text-xs">—</span>
+                    )}
                   </div>
                   <span className="text-white/60 text-sm truncate">{conv.botName}</span>
                   <span className="text-white/40 text-sm">{conv.messageCount}</span>

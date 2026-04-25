@@ -84,6 +84,13 @@ export async function GET(request: NextRequest) {
     #replyo-send:disabled { background: rgba(255,255,255,0.1); cursor: not-allowed; }
     #replyo-send svg { width: 18px; height: 18px; fill: white; margin-left: 2px; }
 
+    #replyo-mic { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+    #replyo-mic:hover { background: rgba(255,255,255,0.1); }
+    #replyo-mic svg { width: 18px; height: 18px; fill: rgba(255,255,255,0.6); }
+    #replyo-mic.recording { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); animation: pulseRecord 1.5s infinite; }
+    #replyo-mic.recording svg { fill: #ef4444; }
+    @keyframes pulseRecord { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
     @media (max-width: 480px) {
       #replyo-panel { bottom: 0; right: 0; width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; transform: translateY(100%); }
       #replyo-btn { bottom: 16px; right: 16px; }
@@ -110,6 +117,9 @@ export async function GET(request: NextRequest) {
       <div id="replyo-msgs"></div>
       <form id="replyo-form">
         <input id="replyo-input" placeholder="Ask me anything..." autocomplete="off" />
+        <button id="replyo-mic" type="button" title="Voice Input">
+          <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
         <button id="replyo-send" type="submit" disabled>
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -128,6 +138,7 @@ export async function GET(request: NextRequest) {
   var form = document.getElementById('replyo-form');
   var input = document.getElementById('replyo-input');
   var sendBtn = document.getElementById('replyo-send');
+  var micBtn = document.getElementById('replyo-mic');
 
   var isOpen = false;
 
@@ -237,6 +248,78 @@ export async function GET(request: NextRequest) {
       appendMsg('Hi there! 👋 How can I help you today?', 'bot', false);
     }
   }
+
+  // Voice Recording Logic
+  var mediaRecorder;
+  var audioChunks = [];
+  var isRecording = false;
+
+  micBtn.addEventListener('click', async function() {
+    if (isRecording) {
+      mediaRecorder.stop();
+      return;
+    }
+
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = function(event) {
+        if (event.data.size > 0) audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async function() {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        stream.getTracks().forEach(function(track) { track.stop(); });
+
+        if (audioChunks.length === 0) return;
+        
+        var audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        var formData = new FormData();
+        formData.append('file', audioBlob, 'audio.webm');
+        
+        input.placeholder = "Processing voice...";
+        input.disabled = true;
+        micBtn.disabled = true;
+
+        var tempTyping = appendTyping();
+
+        try {
+          var res = await fetch(APP_URL + '/api/voice', {
+            method: 'POST',
+            body: formData
+          });
+          if (!res.ok) throw new Error();
+          var data = await res.json();
+          if (data.text) {
+             tempTyping.remove();
+             input.disabled = false;
+             micBtn.disabled = false;
+             input.placeholder = "Ask me anything...";
+             input.value = data.text;
+             sendBtn.disabled = false;
+             form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          } else { throw new Error(); }
+        } catch(e) {
+          tempTyping.remove();
+          input.disabled = false;
+          micBtn.disabled = false;
+          input.placeholder = "Ask me anything...";
+          appendMsg("Sorry, we couldn't process your voice.", 'bot', false);
+        }
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      micBtn.classList.add('recording');
+
+    } catch (err) {
+      console.error(err);
+      appendMsg("Microphone access denied or not supported in your browser.", "bot", false);
+    }
+  });
 
   form.addEventListener('submit', async function(e) {
     e.preventDefault();

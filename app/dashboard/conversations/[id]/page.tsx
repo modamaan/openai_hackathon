@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { bots, conversations, messages } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import Link from "next/link";
-import { ArrowLeft, MessageSquare, User } from "lucide-react";
+import { ArrowLeft, MessageSquare, User, Sparkles, Mail, Phone } from "lucide-react";
 
 export default async function ConversationDetailPage({
   params,
@@ -16,7 +16,15 @@ export default async function ConversationDetailPage({
   if (!user) redirect("/login");
 
   const conv = await db
-    .select({ id: conversations.id, sessionId: conversations.sessionId, createdAt: conversations.createdAt, botName: bots.name })
+    .select({
+      id: conversations.id,
+      sessionId: conversations.sessionId,
+      createdAt: conversations.createdAt,
+      botName: bots.name,
+      visitorEmail: conversations.visitorEmail,
+      visitorPhone: conversations.visitorPhone,
+      isLead: conversations.isLead,
+    })
     .from(conversations)
     .innerJoin(bots, eq(conversations.botId, bots.id))
     .where(eq(conversations.id, id))
@@ -48,6 +56,28 @@ export default async function ConversationDetailPage({
           {conv[0].createdAt ? new Date(conv[0].createdAt).toLocaleString() : ""}
         </span>
       </div>
+
+      {/* Lead Banner */}
+      {conv[0].isLead && (conv[0].visitorEmail || conv[0].visitorPhone) && (
+        <div className="mb-8 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-emerald-400 text-sm font-semibold mb-0.5">Capturered Lead</p>
+              <p className="text-emerald-400/70 text-xs font-medium font-mono">{conv[0].visitorPhone || conv[0].visitorEmail}</p>
+            </div>
+          </div>
+          <a 
+            href={conv[0].visitorPhone ? `tel:${conv[0].visitorPhone}` : `mailto:${conv[0].visitorEmail}?subject=Following up`}
+            className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0"
+          >
+            {conv[0].visitorPhone ? <Phone className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+            {conv[0].visitorPhone ? "Call Visitor" : "Email Visitor"}
+          </a>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="space-y-4">

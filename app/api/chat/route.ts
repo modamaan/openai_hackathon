@@ -40,8 +40,17 @@ export async function POST(request: NextRequest) {
     const relevantChunks = findRelevantChunks(queryEmbedding, allChunks, 5);
     const context = relevantChunks.join("\n\n---\n\n");
 
+    // Extract Phone/Email (Lead Capture)
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+    const phoneRegex = /\+?\d[\d\s\-\(\)]{8,14}\d/;
+    const extractedEmail = message.trim().match(emailRegex)?.[0];
+    const extractedPhone = message.trim().match(phoneRegex)?.[0];
+
     // Build or find conversation
     let conversationId: string;
+    let currentIsLead = false;
+    let currentPhone: string | null = null;
+    
     if (sessionId) {
       const [existing] = await db
         .select()
@@ -49,8 +58,21 @@ export async function POST(request: NextRequest) {
         .where(eq(conversations.sessionId, sessionId))
         .limit(1);
       conversationId = existing?.id ?? (await createConversation(botId, sessionId));
+      currentIsLead = existing?.isLead ?? false;
+      currentPhone = existing?.visitorPhone ?? null;
     } else {
       conversationId = await createConversation(botId, crypto.randomUUID());
+    }
+
+    // Update Lead Status if new info found
+    if ((extractedPhone && extractedPhone !== currentPhone) || (extractedEmail)) {
+      await db.update(conversations)
+        .set({ 
+          visitorPhone: extractedPhone || currentPhone,
+          visitorEmail: extractedEmail || undefined, 
+          isLead: true 
+        })
+        .where(eq(conversations.id, conversationId));
     }
 
     // Save user message
@@ -60,16 +82,18 @@ export async function POST(request: NextRequest) {
       content: message.trim(),
     });
 
-    const systemPrompt = `${bot.systemPrompt ?? "You are a helpful customer support assistant."}
+    const defaultPrompt = "You are a helpful customer support assistant. If a customer is asking about quotes, complex issues, or if you don't know the answer, politely ask them to provide their mobile number so the team can reach out.";
+    const systemPrompt = `${bot.systemPrompt ?? defaultPrompt}
 
 ---
 KNOWLEDGE BASE CONTEXT:
-${context || "No specific context available. Answer generally and politely."}
+${context || "No specific context available."}
 ---
 
 Instructions:
 - Only answer based on the knowledge base context above.
-- If the answer is not in the context, say: "I don't have that information. Please contact our support team."
+- If the user provides a phone number or email address, reply exactly with: "Thank you! Our team has received your contact details and will reach out to you shortly."
+- Otherwise, if the user asks a question and the answer is not in the context, reply exactly with: "I don't have that information. Please provide your mobile number so our support team can contact you."
 - Be concise, friendly, and helpful.`;
 
     // Stream response using OpenAI SDK directly (no @ai-sdk/openai needed)

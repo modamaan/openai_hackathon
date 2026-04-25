@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, index, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // ── Users ──────────────────────────────────────────────────────────────────
@@ -71,6 +71,9 @@ export const conversations = pgTable("conversations", {
     .notNull()
     .references(() => bots.id, { onDelete: "cascade" }),
   sessionId: text("session_id").notNull(),
+  visitorEmail: text("visitor_email"),
+  visitorPhone: text("visitor_phone"),
+  isLead: boolean("is_lead").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -132,7 +132,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {[
               {
                 icon: "📖",
@@ -145,9 +145,14 @@ export default function LandingPage() {
                 desc: "Define exactly what the AI can and cannot say. It will politely decline out-of-scope questions.",
               },
               {
-                icon: "🎙",
-                title: "Tone Matching",
-                desc: "Whether you're professional, quirky or concise, the AI mimics your brand voice perfectly.",
+                icon: "⚡",
+                title: "Smart Lead Capture",
+                desc: "Automatically collects mobile numbers when handling complex queries, turning anonymous visits into real business leads.",
+              },
+              {
+                icon: "👔",
+                title: "One-Click Handoff",
+                desc: "View all captured leads directly in your dashboard with an instant 'Call Visitor' action for your human agents.",
               },
             ].map((f) => (
               <div
@@ -228,7 +233,7 @@ export default function LandingPage() {
               name: "Pro",
               price: "$29",
               desc: "For growing businesses",
-              features: ["5 chatbots", "10,000 messages/mo", "Unlimited URL sources", "Custom branding", "Analytics"],
+              features: ["5 chatbots", "10,000 messages/mo", "Unlimited URL sources", "Smart Lead Capture", "Analytics"],
               cta: "Start free trial",
               highlight: true,
             },
@@ -236,7 +241,7 @@ export default function LandingPage() {
               name: "Business",
               price: "$99",
               desc: "For scaling teams",
-              features: ["Unlimited chatbots", "Unlimited messages", "File upload sources", "Priority support", "SSO & Teams"],
+              features: ["Unlimited chatbots", "Unlimited messages", "File upload sources", "CRM Integrations", "SSO & Teams"],
               cta: "Contact sales",
               highlight: false,
             },
